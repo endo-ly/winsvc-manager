@@ -29,18 +29,3 @@ tools/winsw/
 
 # Personal plan (contains local paths)
 first-plan**.md
-*
-logs/
-*.log
-bin/
-obj/
-.venv/
-err.txt
-*.txt
-!manifests/
-!src/
-!tests/
-!docs/
-!*.md
-!*.sln
-!*.bat
