@@ -23,7 +23,7 @@ class Program
     {
         services.AddSingleton<IManifestReader, YamlManifestReader>();
         services.AddSingleton<IManifestValidator, ManifestValidator>();
-        services.AddSingleton<IWinSwXmlGenerator, WinSwXmlGenerator>();
+        services.AddSingleton<IServiceConfigGenerator, WinSwXmlGenerator>();
         services.AddSingleton<IHealthChecker, HttpClientHealthChecker>();
         services.AddSingleton<IWindowsServiceMonitor, WindowsServiceMonitor>();
         services.AddSingleton<IServiceManager, WinSwServiceManager>();
@@ -82,7 +82,7 @@ class Program
             var manifest = await LoadManifest(sp, id);
             if (manifest == null) return;
 
-            var xml = sp.GetRequiredService<IWinSwXmlGenerator>().Generate(manifest);
+            var xml = sp.GetRequiredService<IServiceConfigGenerator>().Generate(manifest);
             Console.WriteLine(xml);
         }, idArg);
 
@@ -93,7 +93,7 @@ class Program
             var manifest = await LoadManifest(sp, id);
             if (manifest == null) return;
             Console.WriteLine($"Installing {id}...");
-            var xml = sp.GetRequiredService<IWinSwXmlGenerator>().Generate(manifest);
+            var xml = sp.GetRequiredService<IServiceConfigGenerator>().Generate(manifest);
             await sp.GetRequiredService<IServiceManager>().InstallAsync(manifest, xml);
             Console.WriteLine("Done.");
         }, idArg);

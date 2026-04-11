@@ -4,7 +4,7 @@ description: ACE-Step FastAPI service
 
 runtime:
   workDir: C:\svc\runtimes\acestep\ACE-Step-1.5
-  executable: C:\svc\runtimes\acestep\.venv\Scripts\python.exe
+  executable: C:\svc\runtimes\acestep\ACE-Step-1.5\.venv\Scripts\python.exe
   arguments:
     - -m
     - acestep.api_server

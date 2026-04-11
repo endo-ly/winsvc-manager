@@ -6,7 +6,7 @@ namespace Winsvc.Core;
 
 public interface IServiceManager
 {
-    Task InstallAsync(ServiceManifest manifest, string xmlContent);
+    Task InstallAsync(ServiceManifest manifest, string configContent);
     Task UninstallAsync(ServiceManifest manifest);
     Task StartAsync(ServiceManifest manifest);
     Task StopAsync(ServiceManifest manifest);

@@ -5,7 +5,7 @@ using Winsvc.Core;
 
 namespace Winsvc.Infrastructure;
 
-public class WinSwXmlGenerator : IWinSwXmlGenerator
+public class WinSwXmlGenerator : IServiceConfigGenerator
 {
     public string Generate(ServiceManifest manifest)
     {
@@ -42,12 +42,13 @@ public class WinSwXmlGenerator : IWinSwXmlGenerator
         return doc.ToString();
     }
     
-    private XElement GetStartMode(string startMode)
+    private object[] GetStartMode(string startMode)
     {
-        string mode = "Automatic";
-        if (startMode == "delayed-auto") mode = "DelayedAutoStart";
-        else if (startMode == "manual") mode = "Manual";
+        if (startMode == "delayed-auto") 
+            return new object[] { new XElement("startmode", "Automatic"), new XElement("delayedAutoStart", "true") };
+        else if (startMode == "manual") 
+            return new object[] { new XElement("startmode", "Manual") };
         
-        return new XElement("startmode", mode);
+        return new object[] { new XElement("startmode", "Automatic") };
     }
 }

@@ -11,7 +11,7 @@ public class WinSwServiceManager : IServiceManager
 {
     // C# 9+ Requires WinSW executable to be placed inside WrapperDir as '{id}-service.exe'
     
-    public async Task InstallAsync(ServiceManifest manifest, string xmlContent)
+    public async Task InstallAsync(ServiceManifest manifest, string configContent)
     {
         EnsureManaged(manifest);
         var exePath = GetExePath(manifest);
@@ -20,7 +20,7 @@ public class WinSwServiceManager : IServiceManager
         Directory.CreateDirectory(manifest.Service.WrapperDir);
         
         // Write XML
-        await File.WriteAllTextAsync(xmlPath, xmlContent);
+        await File.WriteAllTextAsync(xmlPath, configContent);
         
         // We assume WinSW execution file is manually placed or downloaded to exePath, 
         // but if it's missing, we should error out (or download it). For now, we assume it's there.

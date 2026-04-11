@@ -13,7 +13,6 @@ public class CoreTests
     [Fact]
     public void WinSwXmlGenerator_ShouldGenerateValidXml()
     {
-        // Arrange
         var generator = new WinSwXmlGenerator();
         var manifest = new ServiceManifest
         {

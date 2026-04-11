@@ -2,7 +2,7 @@ using Winsvc.Contracts.Manifest;
 
 namespace Winsvc.Core;
 
-public interface IWinSwXmlGenerator
+public interface IServiceConfigGenerator
 {
     string Generate(ServiceManifest manifest);
 }
