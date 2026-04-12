@@ -49,15 +49,17 @@ class Program
         var listManagedCommand = new Command("managed", "List managed services based on manifests");
         listManagedCommand.SetHandler(async () =>
         {
-            if (!Directory.Exists("manifests"))
+            var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+            if (!Directory.Exists(manifestDirectory))
             {
-                Console.WriteLine("No manifests directory found.");
+                Console.WriteLine($"No manifests directory found: {manifestDirectory}");
                 return;
             }
+
             var reader = sp.GetRequiredService<IManifestReader>();
             var monitor = sp.GetRequiredService<IWindowsServiceMonitor>();
             
-            foreach (var file in Directory.GetFiles("manifests", "*.yaml"))
+            foreach (var file in ManifestPathResolver.EnumerateManifestPaths(manifestDirectory))
             {
                 try {
                     var manifest = await reader.ReadAsync(file);
@@ -167,8 +169,9 @@ class Program
         showCommand.AddArgument(idArg);
         showCommand.SetHandler(async (string id) =>
         {
-            var manifestPath = Path.Combine("manifests", $"{id}.yaml");
-            if (File.Exists(manifestPath))
+            var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+            var manifestPath = ManifestPathResolver.FindManifestPath(manifestDirectory, id);
+            if (manifestPath is not null)
             {
                 var content = await File.ReadAllTextAsync(manifestPath);
                 Console.WriteLine(content);
@@ -192,12 +195,14 @@ class Program
 
     static async Task<Winsvc.Contracts.Manifest.ServiceManifest?> LoadManifest(IServiceProvider sp, string id)
     {
-        var manifestPath = Path.Combine("manifests", $"{id}.yaml");
-        if (!File.Exists(manifestPath))
+        var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+        var manifestPath = ManifestPathResolver.FindManifestPath(manifestDirectory, id);
+        if (manifestPath is null)
         {
-            Console.Error.WriteLine($"Manifest not found: {manifestPath}");
+            Console.Error.WriteLine($"Manifest not found for service-id '{id}' in {manifestDirectory}");
             return null;
         }
+
         var reader = sp.GetRequiredService<IManifestReader>();
         return await reader.ReadAsync(manifestPath);
     }

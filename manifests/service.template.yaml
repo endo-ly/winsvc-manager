@@ -1,0 +1,30 @@
+id: sample-service
+type: managed
+displayName: Sample Service
+description: Replace this template with your service definition.
+
+runtime:
+  workDir: C:\svc\runtimes\sample-service\current
+  executable: C:\svc\runtimes\sample-service\current\run.cmd
+  arguments: []
+
+service:
+  wrapperDir: C:\svc\services\sample-service
+  startMode: delayed-auto
+  onFailure: restart
+  resetFailure: 1 hour
+
+env:
+  SAMPLE_BIND_HOST: 127.0.0.1
+  SAMPLE_BIND_PORT: "9000"
+  SAMPLE_API_KEY: "<set-later>"
+
+health:
+  url: http://127.0.0.1:9000/health
+  timeoutSec: 5
+
+exposure:
+  tailscaleServe:
+    enabled: false
+    httpsPort: 0
+    target: http://127.0.0.1:9000

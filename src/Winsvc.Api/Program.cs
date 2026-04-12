@@ -6,8 +6,11 @@ using Winsvc.Core;
 using Winsvc.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-
-builder.WebHost.UseUrls("http://127.0.0.1:8011");
+var apiUrls = builder.Configuration["Winsvc:Api:Urls"];
+if (!string.IsNullOrWhiteSpace(apiUrls))
+{
+    builder.WebHost.UseUrls(apiUrls);
+}
 
 builder.Services.AddSingleton<IManifestReader, YamlManifestReader>();
 builder.Services.AddSingleton<IManifestValidator, ManifestValidator>();
@@ -34,9 +37,10 @@ app.MapGet("/services/managed", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IWindowsServiceMonitor monitor,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, cancellationToken);
+    var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, cancellationToken);
     var response = new List<ManagedServiceResponse>();
 
     foreach (var manifest in manifests)
@@ -60,9 +64,10 @@ app.MapGet("/services/{id}", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IWindowsServiceMonitor monitor,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, cancellationToken);
+    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
     if (manifest is null)
     {
         return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -90,9 +95,10 @@ app.MapGet("/services/{id}/health", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IHealthChecker healthChecker,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, cancellationToken);
+    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
     if (manifest is null)
     {
         return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -112,9 +118,10 @@ app.MapPost("/services/{id}/start", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IServiceManager serviceManager,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, cancellationToken);
+    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
     if (manifest is null)
     {
         return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -129,9 +136,10 @@ app.MapPost("/services/{id}/stop", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IServiceManager serviceManager,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, cancellationToken);
+    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
     if (manifest is null)
     {
         return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -146,9 +154,10 @@ app.MapPost("/services/{id}/restart", async (
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
     IServiceManager serviceManager,
+    IConfiguration configuration,
     CancellationToken cancellationToken) =>
 {
-    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, cancellationToken);
+    var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
     if (manifest is null)
     {
         return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -163,22 +172,15 @@ app.Run();
 static async Task<IReadOnlyList<ServiceManifest>> LoadManifestsAsync(
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
+    IConfiguration configuration,
     CancellationToken cancellationToken)
 {
-    var manifestDirectory = Path.Combine(AppContext.BaseDirectory, "manifests");
-    if (!Directory.Exists(manifestDirectory))
-    {
-        manifestDirectory = Path.Combine(Directory.GetCurrentDirectory(), "manifests");
-    }
+    var manifestDirectory = ManifestPathResolver.ResolveDirectory(
+        configuration["Winsvc:ManifestDirectory"],
+        AppContext.BaseDirectory,
+        Directory.GetCurrentDirectory());
 
-    if (!Directory.Exists(manifestDirectory))
-    {
-        return Array.Empty<ServiceManifest>();
-    }
-
-    var paths = Directory
-        .EnumerateFiles(manifestDirectory, "*.y*ml", SearchOption.TopDirectoryOnly)
-        .OrderBy(path => path, StringComparer.OrdinalIgnoreCase);
+    var paths = ManifestPathResolver.EnumerateManifestPaths(manifestDirectory);
 
     var manifests = new List<ServiceManifest>();
 
@@ -203,9 +205,10 @@ static async Task<ServiceManifest?> LoadManifestAsync(
     string id,
     IManifestReader manifestReader,
     IManifestValidator manifestValidator,
+    IConfiguration configuration,
     CancellationToken cancellationToken)
 {
-    var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, cancellationToken);
+    var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, cancellationToken);
     return manifests.FirstOrDefault(manifest => string.Equals(manifest.Id, id, StringComparison.OrdinalIgnoreCase));
 }
 
