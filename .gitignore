@@ -36,4 +36,4 @@ manifests/*.yml
 *.log
 
 # Personal plan (contains local paths)
-first-plan**.md
+**plan**.md
