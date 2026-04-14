@@ -67,4 +67,5 @@ Script:
 ## Notes
 
 - 配布 ZIP の中の実行ファイル名は `winsvc.exe`
+- ZIP には `appsettings.json`（API 用既定設定）も含まれます
 - Git tag は `v0.1.0` 形式を想定
