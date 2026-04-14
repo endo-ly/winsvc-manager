@@ -97,6 +97,9 @@ winsvc api serve --manifest-dir ./my-services
 URL や manifest ディレクトリは `appsettings.json` の `Winsvc:Api:Urls` / `Winsvc:ManifestDirectory`、または環境変数 `Winsvc__Api__Urls` / `Winsvc__ManifestDirectory` でも設定できます。
 CLI 引数はこれらを上書きします。
 
+`appsettings.json` は `winsvc.exe` と同じディレクトリに配置してください。配布 ZIP に含まれているものをそのまま使えます。
+独自の設定にする場合は内容を書き換えるか、環境変数・CLI 引数で上書きしてください。
+
 API 一覧:
 
 | Method | Path | 説明 |
