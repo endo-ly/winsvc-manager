@@ -26,7 +26,10 @@ public static class ManifestPathResolver
 
         foreach (var baseDirectory in baseDirectories.Where(path => !string.IsNullOrWhiteSpace(path)))
         {
-            candidates.Add(Path.Combine(baseDirectory, "manifests"));
+            foreach (var candidate in EnumerateManifestDirectoryCandidates(baseDirectory))
+            {
+                candidates.Add(candidate);
+            }
         }
 
         foreach (var candidate in candidates)
@@ -39,6 +42,16 @@ public static class ManifestPathResolver
         }
 
         return Path.GetFullPath(candidates.FirstOrDefault() ?? "manifests");
+    }
+
+    static IEnumerable<string> EnumerateManifestDirectoryCandidates(string baseDirectory)
+    {
+        var current = new DirectoryInfo(Path.GetFullPath(baseDirectory));
+        while (current is not null)
+        {
+            yield return Path.Combine(current.FullName, "manifests");
+            current = current.Parent;
+        }
     }
 
     public static IReadOnlyList<string> EnumerateManifestPaths(string manifestDirectory)

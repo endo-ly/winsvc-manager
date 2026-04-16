@@ -74,7 +74,10 @@ class Program
         var listManagedCommand = new Command("managed", "List managed services based on manifests");
         listManagedCommand.SetHandler(async () =>
         {
-            var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+            var manifestDirectory = ManifestPathResolver.ResolveDirectory(
+                configuredPath: null,
+                AppContext.BaseDirectory,
+                Directory.GetCurrentDirectory());
             if (!Directory.Exists(manifestDirectory))
             {
                 Console.WriteLine($"No manifests directory found: {manifestDirectory}");
@@ -194,7 +197,10 @@ class Program
         showCommand.AddArgument(idArg);
         showCommand.SetHandler(async (string id) =>
         {
-            var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+            var manifestDirectory = ManifestPathResolver.ResolveDirectory(
+                configuredPath: null,
+                AppContext.BaseDirectory,
+                Directory.GetCurrentDirectory());
             var manifestPath = ManifestPathResolver.FindManifestPath(manifestDirectory, id);
             if (manifestPath is not null)
             {
@@ -221,7 +227,10 @@ class Program
 
     static async Task<Winsvc.Contracts.Manifest.ServiceManifest?> LoadManifest(IServiceProvider sp, string id)
     {
-        var manifestDirectory = ManifestPathResolver.ResolveDirectory(configuredPath: null, Directory.GetCurrentDirectory());
+        var manifestDirectory = ManifestPathResolver.ResolveDirectory(
+            configuredPath: null,
+            AppContext.BaseDirectory,
+            Directory.GetCurrentDirectory());
         var manifestPath = ManifestPathResolver.FindManifestPath(manifestDirectory, id);
         if (manifestPath is null)
         {

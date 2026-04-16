@@ -1,5 +1,6 @@
 using System.IO;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Hosting;
 using Winsvc.Contracts;
 using Winsvc.Contracts.Api;
 using Winsvc.Contracts.Manifest;
@@ -28,9 +29,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IWindowsServiceMonitor monitor,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             var response = new List<ManagedServiceResponse>();
 
             foreach (var manifest in manifests)
@@ -55,9 +57,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IWindowsServiceMonitor monitor,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             if (manifest is null)
             {
                 return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -86,9 +89,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IHealthChecker healthChecker,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             if (manifest is null)
             {
                 return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -109,9 +113,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IServiceManager serviceManager,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             if (manifest is null)
             {
                 return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -127,9 +132,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IServiceManager serviceManager,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             if (manifest is null)
             {
                 return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -145,9 +151,10 @@ public static class ApiEndpointExtensions
             IManifestValidator manifestValidator,
             IServiceManager serviceManager,
             IConfiguration configuration,
+            IHostEnvironment env,
             CancellationToken cancellationToken) =>
         {
-            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, cancellationToken);
+            var manifest = await LoadManifestAsync(id, manifestReader, manifestValidator, configuration, env.ContentRootPath, cancellationToken);
             if (manifest is null)
             {
                 return Results.NotFound(new ErrorResponse($"Managed service '{id}' was not found."));
@@ -164,10 +171,12 @@ public static class ApiEndpointExtensions
         IManifestReader manifestReader,
         IManifestValidator manifestValidator,
         IConfiguration configuration,
+        string contentRootPath,
         CancellationToken cancellationToken)
     {
         var manifestDirectory = ManifestPathResolver.ResolveDirectory(
             configuration["Winsvc:ManifestDirectory"],
+            contentRootPath,
             AppContext.BaseDirectory,
             Directory.GetCurrentDirectory());
 
@@ -197,9 +206,10 @@ public static class ApiEndpointExtensions
         IManifestReader manifestReader,
         IManifestValidator manifestValidator,
         IConfiguration configuration,
+        string contentRootPath,
         CancellationToken cancellationToken)
     {
-        var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, cancellationToken);
+        var manifests = await LoadManifestsAsync(manifestReader, manifestValidator, configuration, contentRootPath, cancellationToken);
         return manifests.FirstOrDefault(manifest => string.Equals(manifest.Id, id, StringComparison.OrdinalIgnoreCase));
     }
 
