@@ -9,8 +9,6 @@ namespace Winsvc.Infrastructure;
 
 public class WinSwServiceManager : IServiceManager
 {
-    // C# 9+ Requires WinSW executable to be placed inside WrapperDir as '{id}-service.exe'
-    
     public async Task InstallAsync(ServiceManifest manifest, string configContent)
     {
         EnsureManaged(manifest);
@@ -18,16 +16,10 @@ public class WinSwServiceManager : IServiceManager
         var xmlPath = GetXmlPath(manifest);
 
         Directory.CreateDirectory(manifest.Service.WrapperDir);
-        
+        EnsureWinSwWrapperExecutable(manifest, exePath);
+
         // Write XML
         await File.WriteAllTextAsync(xmlPath, configContent);
-        
-        // We assume WinSW execution file is manually placed or downloaded to exePath, 
-        // but if it's missing, we should error out (or download it). For now, we assume it's there.
-        if (!File.Exists(exePath))
-        {
-            throw new FileNotFoundException($"WinSW executable not found at {exePath}. Please place it before installing.");
-        }
 
         await RunCommandAsync(exePath, "install");
     }
@@ -64,6 +56,44 @@ public class WinSwServiceManager : IServiceManager
 
     private string GetExePath(ServiceManifest manifest) => Path.Combine(manifest.Service.WrapperDir, $"{manifest.Id}-service.exe");
     private string GetXmlPath(ServiceManifest manifest) => Path.Combine(manifest.Service.WrapperDir, $"{manifest.Id}-service.xml");
+    
+    private static void EnsureWinSwWrapperExecutable(ServiceManifest manifest, string wrapperExePath)
+    {
+        if (File.Exists(wrapperExePath))
+        {
+            return;
+        }
+
+        var sourcePath = ResolveWinSwSourcePath(manifest.Service.WrapperDir);
+        if (sourcePath is null)
+        {
+            throw new FileNotFoundException(
+                $"WinSW wrapper executable not found at {wrapperExePath}. " +
+                "Place '<id>-service.exe' under service.wrapperDir, or place 'winsw.exe' next to winsvc.exe.");
+        }
+
+        File.Copy(sourcePath, wrapperExePath, overwrite: false);
+    }
+
+    private static string? ResolveWinSwSourcePath(string wrapperDir)
+    {
+        foreach (var filename in new[] { "winsw.exe", "WinSW.exe", "WinSW-net462.exe" })
+        {
+            var wrapperCandidate = Path.Combine(wrapperDir, filename);
+            if (File.Exists(wrapperCandidate))
+            {
+                return wrapperCandidate;
+            }
+
+            var bundledCandidate = Path.Combine(AppContext.BaseDirectory, filename);
+            if (File.Exists(bundledCandidate))
+            {
+                return bundledCandidate;
+            }
+        }
+
+        return null;
+    }
 
     private async Task RunCommandAsync(string exePath, string arguments)
     {

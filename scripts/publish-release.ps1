@@ -23,6 +23,10 @@ $hashPath = "$zipPath.sha256"
 $assemblyVersion = if ($Version.StartsWith("v")) { $Version.Substring(1) } else { $Version }
 $publishedExePath = Join-Path $publishDir "Winsvc.Cli.exe"
 $renamedExePath = Join-Path $publishDir "winsvc.exe"
+$bundledWinSwPath = Join-Path $publishDir "winsw.exe"
+$winswSourcePath = Join-Path $repoRoot "tools\winsw\WinSW.exe"
+$manifestSourceDir = Join-Path $repoRoot "manifests"
+$manifestTargetDir = Join-Path $publishDir "manifests"
 
 if (Test-Path $publishDir) {
     Remove-Item -LiteralPath $publishDir -Recurse -Force
@@ -67,6 +71,17 @@ if (Test-Path -LiteralPath $publishedExePath) {
 
 if (-not (Test-Path -LiteralPath $renamedExePath)) {
     throw "Expected executable was not found: $renamedExePath"
+}
+
+if (-not (Test-Path -LiteralPath $winswSourcePath)) {
+    throw "WinSW binary not found: $winswSourcePath. Run .\scripts\bootstrap.ps1 first."
+}
+
+Copy-Item -LiteralPath $winswSourcePath -Destination $bundledWinSwPath -Force
+
+New-Item -ItemType Directory -Path $manifestTargetDir -Force | Out-Null
+Get-ChildItem -LiteralPath $manifestSourceDir -Filter "*.template.y*ml" -File | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $manifestTargetDir $_.Name) -Force
 }
 
 $publishedFiles = Get-ChildItem -LiteralPath $publishDir

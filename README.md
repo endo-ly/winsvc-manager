@@ -31,6 +31,15 @@ winsvc start sample-service
 winsvc status sample-service
 ```
 
+### Bundled Files In Release ZIP
+
+- `winsvc.exe`
+- `winsw.exe`
+- `appsettings.json`
+- `manifests/service.template.yaml`
+
+`winsvc install <service-id>` now auto-copies bundled `winsw.exe` to `service.wrapperDir\<id>-service.exe` when that wrapper executable is missing.
+
 `winsvc` コマンドとして実行するには、`winsvc.exe` が `PATH` の通った場所にある必要があります。
 まだ `PATH` に入れていない場合は、そのディレクトリで `.\winsvc.exe` を使ってください。
 
@@ -43,7 +52,7 @@ GitHub Releases では次の配布物を提供します。
 - `winsvc-<tag>-win-arm64.zip`
 - `winsvc-<tag>-win-arm64.zip.sha256`
 
-ZIP を展開すると `winsvc.exe` と `appsettings.json` が入っています。
+ZIP を展開すると `winsvc.exe` / `winsw.exe` / `appsettings.json` / `manifests/service.template.yaml` が入っています。
 
 必要であれば SHA256 を照合してください。
 
@@ -60,7 +69,7 @@ Get-Content .\winsvc-v0.1.0-win-x64.zip.sha256
 | --- | --- | --- |
 | `winsvc --help` | なし | 利用可能なコマンドと引数を表示します。 |
 | `winsvc render <service-id>` | `service-id`: manifest の ID | 指定 service の manifest を読み込み、生成される WinSW XML を標準出力に表示します。実際の install は行いません。 |
-| `winsvc install <service-id>` | `service-id`: manifest の ID | manifest を読み込み、WinSW XML を生成したうえで対象 service を install します。 |
+| `winsvc install <service-id>` | `service-id`: manifest の ID | manifest を読み込み、WinSW XML を生成したうえで対象 service を install します。`service.wrapperDir\<id>-service.exe` が無い場合は同梱 `winsw.exe` から自動配置します。 |
 | `winsvc uninstall <service-id>` | `service-id`: manifest の ID | 指定 service を uninstall します。manifest が必要です。 |
 | `winsvc start <service-id>` | `service-id`: manifest の ID | 指定 service を起動します。 |
 | `winsvc stop <service-id>` | `service-id`: manifest の ID | 指定 service を停止します。 |

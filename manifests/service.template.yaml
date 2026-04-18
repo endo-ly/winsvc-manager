@@ -1,25 +1,47 @@
+# File name must be "<service-id>.yaml".
+# Example: "sample-service.yaml" when id is "sample-service".
 id: sample-service
+
+# Always "managed" unless you intentionally operate an external service manually.
 type: managed
+
+# Human-readable service display name shown by Windows Service Manager.
 displayName: Sample Service
 description: Replace this template with your service definition.
 
 runtime:
+  # Working directory of your actual application process.
   workDir: C:\svc\runtimes\sample-service\current
+
+  # Actual application executable/script path to run.
+  # This is NOT the WinSW wrapper executable.
   executable: C:\svc\runtimes\sample-service\current\run.cmd
+
+  # Command-line arguments for runtime.executable.
   arguments: []
 
 service:
+  # Directory where WinSW wrapper files are stored:
+  # - <id>-service.exe
+  # - <id>-service.xml
+  # - logs
   wrapperDir: C:\svc\services\sample-service
+
+  # Service start mode: auto | delayed-auto | manual
   startMode: delayed-auto
+
+  # Recovery behavior when the process exits unexpectedly.
   onFailure: restart
   resetFailure: 1 hour
 
 env:
+  # Environment variables passed to the runtime process.
   SAMPLE_BIND_HOST: 127.0.0.1
   SAMPLE_BIND_PORT: "9000"
   SAMPLE_API_KEY: "<set-later>"
 
 health:
+  # Health endpoint polled by "winsvc health <service-id>".
   url: http://127.0.0.1:9000/health
   timeoutSec: 5
 
