@@ -37,6 +37,10 @@ jobs:
       - name: Test
         run: dotnet test winsvc-manager.sln --configuration Release --no-build -m:1
 
+      - name: Bootstrap release tools
+        shell: pwsh
+        run: ./scripts/bootstrap.ps1
+
       - name: Publish CLI package
         shell: pwsh
         run: >
