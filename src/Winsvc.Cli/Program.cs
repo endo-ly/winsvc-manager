@@ -3,6 +3,7 @@ using System.CommandLine;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
+using Winsvc.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -126,9 +127,47 @@ class Program
         {
             var manifest = await LoadManifest(sp, id);
             if (manifest == null) return;
+
+            var monitor = sp.GetRequiredService<IWindowsServiceMonitor>();
+            var existing = await monitor.GetServiceAsync(manifest.Id);
+            if (existing is not null)
+            {
+                Console.Error.WriteLine($"Service '{id}' is already installed. Use 'winsvc reinstall {id}' to replace it.");
+                return;
+            }
+
             Console.WriteLine($"Installing {id}...");
             var xml = sp.GetRequiredService<IServiceConfigGenerator>().Generate(manifest);
             await sp.GetRequiredService<IServiceManager>().InstallAsync(manifest, xml);
+            Console.WriteLine("Done.");
+        }, idArg);
+
+        var reinstallCommand = new Command("reinstall", "Reinstall the service using WinSW");
+        reinstallCommand.AddArgument(idArg);
+        reinstallCommand.SetHandler(async (string id) =>
+        {
+            var manifest = await LoadManifest(sp, id);
+            if (manifest == null) return;
+
+            var serviceManager = sp.GetRequiredService<IServiceManager>();
+            var monitor = sp.GetRequiredService<IWindowsServiceMonitor>();
+            var existing = await monitor.GetServiceAsync(manifest.Id);
+
+            if (existing is not null)
+            {
+                if (existing.State != ServiceState.Stopped)
+                {
+                    Console.WriteLine($"Stopping {id}...");
+                    await serviceManager.StopAsync(manifest);
+                }
+
+                Console.WriteLine($"Uninstalling {id}...");
+                await serviceManager.UninstallAsync(manifest);
+            }
+
+            Console.WriteLine($"Installing {id}...");
+            var xml = sp.GetRequiredService<IServiceConfigGenerator>().Generate(manifest);
+            await serviceManager.InstallAsync(manifest, xml);
             Console.WriteLine("Done.");
         }, idArg);
 
@@ -218,6 +257,7 @@ class Program
         rootCommand.AddCommand(listCommand);
         rootCommand.AddCommand(renderCommand);
         rootCommand.AddCommand(installCommand);
+        rootCommand.AddCommand(reinstallCommand);
         rootCommand.AddCommand(uninstallCommand);
         rootCommand.AddCommand(startCommand);
         rootCommand.AddCommand(stopCommand);
