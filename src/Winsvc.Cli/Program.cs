@@ -3,10 +3,11 @@ using System.CommandLine;
 using System.IO;
 using System.Runtime.Versioning;
 using System.Threading.Tasks;
-using Winsvc.Contracts;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Winsvc.Contracts;
+using Winsvc.Contracts.Manifest;
 using Winsvc.Core;
 using Winsvc.Hosting;
 using Winsvc.Infrastructure;
@@ -155,14 +156,7 @@ class Program
 
             if (existing is not null)
             {
-                if (existing.State != ServiceState.Stopped)
-                {
-                    Console.WriteLine($"Stopping {id}...");
-                    await serviceManager.StopAsync(manifest);
-                }
-
-                Console.WriteLine($"Uninstalling {id}...");
-                await serviceManager.UninstallAsync(manifest);
+                await UninstallAndWaitAsync(manifest, serviceManager, monitor);
             }
 
             Console.WriteLine($"Installing {id}...");
@@ -177,8 +171,17 @@ class Program
         {
             var manifest = await LoadManifest(sp, id);
             if (manifest == null) return;
-            Console.WriteLine($"Uninstalling {id}...");
-            await sp.GetRequiredService<IServiceManager>().UninstallAsync(manifest);
+
+            var serviceManager = sp.GetRequiredService<IServiceManager>();
+            var monitor = sp.GetRequiredService<IWindowsServiceMonitor>();
+            var existing = await monitor.GetServiceAsync(manifest.Id);
+            if (existing is null)
+            {
+                Console.WriteLine($"Service '{id}' is not installed.");
+                return;
+            }
+
+            await UninstallAndWaitAsync(manifest, serviceManager, monitor);
             Console.WriteLine("Done.");
         }, idArg);
 
@@ -269,7 +272,55 @@ class Program
         return rootCommand;
     }
 
-    static async Task<Winsvc.Contracts.Manifest.ServiceManifest?> LoadManifest(IServiceProvider sp, string id)
+    static async Task UninstallAndWaitAsync(
+        ServiceManifest manifest,
+        IServiceManager serviceManager,
+        IWindowsServiceMonitor monitor)
+    {
+        await StopIfNeededAsync(manifest, serviceManager, monitor);
+
+        Console.WriteLine($"Uninstalling {manifest.Id}...");
+        await serviceManager.UninstallAsync(manifest);
+
+        if (!await WaitUntilServiceRemovedAsync(manifest.Id, monitor))
+        {
+            throw new InvalidOperationException(
+                $"Service '{manifest.Id}' was marked for deletion but is still visible to Windows. " +
+                "Close Service Manager, stop any running winsvc API process, or reboot, then try again.");
+        }
+    }
+
+    static async Task StopIfNeededAsync(
+        ServiceManifest manifest,
+        IServiceManager serviceManager,
+        IWindowsServiceMonitor monitor)
+    {
+        var current = await monitor.GetServiceAsync(manifest.Id);
+        if (current is null || current.State == ServiceState.Stopped)
+        {
+            return;
+        }
+
+        Console.WriteLine($"Stopping {manifest.Id}...");
+        await serviceManager.StopAsync(manifest);
+    }
+
+    static async Task<bool> WaitUntilServiceRemovedAsync(string id, IWindowsServiceMonitor monitor)
+    {
+        for (var attempt = 0; attempt < 30; attempt++)
+        {
+            if (await monitor.GetServiceAsync(id) is null)
+            {
+                return true;
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(1));
+        }
+
+        return false;
+    }
+
+    static async Task<ServiceManifest?> LoadManifest(IServiceProvider sp, string id)
     {
         var manifestDirectory = ManifestPathResolver.ResolveDirectory(
             configuredPath: null,
