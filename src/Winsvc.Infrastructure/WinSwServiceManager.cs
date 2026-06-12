@@ -48,6 +48,16 @@ public class WinSwServiceManager : IServiceManager
         await RunCommandAsync(GetExePath(manifest), "restart");
     }
 
+    public async Task UninstallByExePathAsync(string exePath)
+    {
+        await RunCommandAsync(exePath, "uninstall");
+    }
+
+    public async Task StopByExePathAsync(string exePath)
+    {
+        await RunCommandAsync(exePath, "stop");
+    }
+
     private void EnsureManaged(ServiceManifest manifest)
     {
         if (manifest.Type != "managed")

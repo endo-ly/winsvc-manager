@@ -170,18 +170,41 @@ class Program
         uninstallCommand.SetHandler(async (string id) =>
         {
             var manifest = await LoadManifest(sp, id);
-            if (manifest == null) return;
 
             var serviceManager = sp.GetRequiredService<IServiceManager>();
             var monitor = sp.GetRequiredService<IWindowsServiceMonitor>();
-            var existing = await monitor.GetServiceAsync(manifest.Id);
+            var existing = await monitor.GetServiceAsync(id);
             if (existing is null)
             {
                 Console.WriteLine($"Service '{id}' is not installed.");
                 return;
             }
 
-            await UninstallAndWaitAsync(manifest, serviceManager, monitor);
+            if (manifest is not null)
+            {
+                await UninstallAndWaitAsync(manifest, serviceManager, monitor);
+                Console.WriteLine("Done.");
+                return;
+            }
+
+            Console.WriteLine($"Manifest not found. Attempting fallback uninstall for '{id}'...");
+            var exePath = await TryResolveWinSwExePathAsync(id, monitor);
+            if (exePath is null)
+            {
+                Console.Error.WriteLine($"Could not resolve WinSW executable for service '{id}'. Aborting.");
+                return;
+            }
+
+            await StopIfNeededByExePathAsync(id, exePath, serviceManager, monitor);
+            Console.WriteLine($"Uninstalling {id}...");
+            await serviceManager.UninstallByExePathAsync(exePath);
+
+            if (!await WaitUntilServiceRemovedAsync(id, monitor))
+            {
+                throw new InvalidOperationException(
+                    $"Service '{id}' was marked for deletion but is still visible to Windows. " +
+                    "Close Service Manager, stop any running winsvc API process, or reboot, then try again.");
+            }
             Console.WriteLine("Done.");
         }, idArg);
 
@@ -270,6 +293,48 @@ class Program
         rootCommand.AddCommand(showCommand);
 
         return rootCommand;
+    }
+
+    static async Task<string?> TryResolveWinSwExePathAsync(string id, IWindowsServiceMonitor monitor)
+    {
+        var exePath = await monitor.GetServiceExePathAsync(id);
+        if (exePath is null)
+        {
+            Console.Error.WriteLine($"Cannot uninstall '{id}': service binary path not found in registry. This service may not have been installed via winsvc.");
+            return null;
+        }
+
+        var fileName = Path.GetFileName(exePath);
+        var expected = $"{id}-service.exe";
+        if (!string.Equals(fileName, expected, StringComparison.OrdinalIgnoreCase))
+        {
+            Console.Error.WriteLine($"Cannot uninstall '{id}': binary '{exePath}' does not match winsvc naming convention '{expected}'. Only services installed via winsvc can be uninstalled without a manifest.");
+            return null;
+        }
+
+        if (!File.Exists(exePath))
+        {
+            Console.Error.WriteLine($"Cannot uninstall '{id}': WinSW wrapper executable not found at '{exePath}'. The wrapper may have been manually deleted.");
+            return null;
+        }
+
+        return exePath;
+    }
+
+    static async Task StopIfNeededByExePathAsync(
+        string id,
+        string exePath,
+        IServiceManager serviceManager,
+        IWindowsServiceMonitor monitor)
+    {
+        var current = await monitor.GetServiceAsync(id);
+        if (current is null || current.State == ServiceState.Stopped)
+        {
+            return;
+        }
+
+        Console.WriteLine($"Stopping {id}...");
+        await serviceManager.StopByExePathAsync(exePath);
     }
 
     static async Task UninstallAndWaitAsync(

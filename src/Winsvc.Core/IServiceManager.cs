@@ -11,4 +11,6 @@ public interface IServiceManager
     Task StartAsync(ServiceManifest manifest);
     Task StopAsync(ServiceManifest manifest);
     Task RestartAsync(ServiceManifest manifest);
+    Task UninstallByExePathAsync(string exePath);
+    Task StopByExePathAsync(string exePath);
 }

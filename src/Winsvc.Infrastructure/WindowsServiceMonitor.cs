@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.Versioning;
 using System.ServiceProcess;
 using System.Threading.Tasks;
+using Microsoft.Win32;
 using Winsvc.Contracts;
 using Winsvc.Core;
 
@@ -33,6 +34,26 @@ public class WindowsServiceMonitor : IWindowsServiceMonitor
         {
             return Task.FromResult<WindowsServiceInfo?>(null);
         }
+    }
+
+    public Task<string?> GetServiceExePathAsync(string id)
+    {
+        try
+        {
+            using var key = Registry.LocalMachine.OpenSubKey($@"SYSTEM\CurrentControlSet\Services\{id}");
+            if (key?.GetValue("ImagePath") is string imagePath)
+            {
+                var exePath = Environment.ExpandEnvironmentVariables(imagePath);
+                if (exePath.StartsWith("\"", StringComparison.Ordinal) && exePath.IndexOf('"', 1) is int idx and > 0)
+                {
+                    exePath = exePath.Substring(1, idx - 1);
+                }
+                return Task.FromResult<string?>(exePath);
+            }
+        }
+        catch { }
+
+        return Task.FromResult<string?>(null);
     }
 
     private WindowsServiceInfo MapServiceInfo(ServiceController sc)
