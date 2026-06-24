@@ -235,4 +235,8 @@ MY_APP_PORT: 9000
 
 ### manifest の変更を反映するには？
 
-サービスの再インストールが必要です。`winsvc uninstall <service-id>` でアンインストールしたあと、`winsvc install <service-id>` で再インストールしてください。変更前に `winsvc render <service-id>` で生成される内容を確認できます。
+`winsvc api serve` の起動中は、manifest ファイルの追加・変更・削除が自動検出されます。API の `/services/managed`、`/services/{id}`、`/services/{id}/health`、start / stop / restart は、再起動なしで更新後の manifest キャッシュを参照します。`*.template.yaml` / `*.template.yml` は監視対象から除外されます。
+
+この自動反映は API の読み取り・操作に使う manifest キャッシュの更新です。すでに Windows Service としてインストール済みの WinSW XML は自動では書き換えません。`runtime`、`env`、`service.startMode` など、インストール時に生成されるサービス設定を Windows Service 側へ反映する場合は、従来どおり `winsvc reinstall <service-id>` を実行してください。変更前に `winsvc render <service-id>` で生成される内容を確認できます。
+
+hot reload は既定で有効です。無効化する場合は `appsettings.json` の `Winsvc:ManifestHotReload`、または環境変数 `Winsvc__ManifestHotReload=false` を設定します。

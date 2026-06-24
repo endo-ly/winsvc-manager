@@ -111,6 +111,7 @@ winsvc api serve --urls http://localhost:9011 --manifest-dir ./my-services
 ```
 
 設定は CLI 引数 > 環境変数 > `appsettings.json` の順で優先される。
+API 起動中は manifest の追加・変更・削除が自動検出され、`/services/managed` や `/services/{id}` の応答に反映されます。既定では有効です。無効化する場合は `appsettings.json` または環境変数で `Winsvc:ManifestHotReload` / `Winsvc__ManifestHotReload` を `false` にしてください。
 
 ### エンドポイント一覧
 

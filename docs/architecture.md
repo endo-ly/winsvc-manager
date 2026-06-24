@@ -122,6 +122,7 @@ Winsvc.Core は、アプリケーションの境界を定めるレイヤーで�
 | インターフェース | 役割 |
 |---|---|
 | IManifestReader | manifest ファイルの読み込み |
+| IManifestProvider | API が参照する manifest 一覧・詳細の取得とキャッシュ境界 |
 | IManifestValidator | manifest の妥当性検証 |
 | IServiceConfigGenerator | WinSW 用 XML の生成 |
 | IServiceManager | サービスの操作（install, uninstall, start, stop, restart） |
@@ -139,6 +140,7 @@ Winsvc.Infrastructure は、Core のインターフェースに対する具体�
 | クラス | 対応インターフェース | 副作用の内容 |
 |---|---|---|
 | YamlManifestReader | IManifestReader | YAML ファイルの読み込み（YamlDotNet 使用） |
+| FileSystemWatcherManifestProvider | IManifestProvider / IHostedService | 起動時に manifest を読み込み、FileSystemWatcher で追加・変更・削除を検知してキャッシュを更新 |
 | ManifestValidator | IManifestValidator | manifest のバリデーション |
 | WinSwXmlGenerator | IServiceConfigGenerator | WinSW 用 XML 文字列の生成 |
 | WinSwServiceManager | IServiceManager | WinSW 実行ファイルのプロセス起動と操作 |
@@ -148,6 +150,7 @@ Winsvc.Infrastructure は、Core のインターフェースに対する具体�
 ### Hosting
 
 Winsvc.Hosting は、ASP.NET Core Minimal APIs でエンドポイントを定義し、DI コンテナへのサービス登録を行います。
+API の manifest 参照は `IManifestProvider` に集約されます。既定では `FileSystemWatcherManifestProvider` が `IHostedService` として起動し、manifest ディレクトリを監視してメモリ上のキャッシュを更新します。
 
 現在のエンドポイント:
 
@@ -201,5 +204,6 @@ CLI 引数 > 環境変数 > appsettings.json
 |---|---|---|---|
 | API URL | `--urls` | `Winsvc__Api__Urls` | `Winsvc:Api:Urls` |
 | Manifest ディレクトリ | `--manifest-dir` | `Winsvc__ManifestDirectory` | `Winsvc:ManifestDirectory` |
+| Manifest hot reload | - | `Winsvc__ManifestHotReload` | `Winsvc:ManifestHotReload` |
 
 環境変数の区切り文字に `__`（二重アンダースコア）を使っているのは、ASP.NET Core の規約です。`appsettings.json` ではコロン区切り（`Winsvc:Api:Urls`）で同じ設定を表します。
