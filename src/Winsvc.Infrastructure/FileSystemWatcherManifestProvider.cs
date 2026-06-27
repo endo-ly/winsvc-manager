@@ -39,15 +39,14 @@ public sealed class FileSystemWatcherManifestProvider : IManifestProvider, IHost
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        await RefreshAsync(cancellationToken);
+        Directory.CreateDirectory(manifestDirectory);
 
         if (!hotReloadEnabled)
         {
+            await RefreshAsync(cancellationToken);
             logger.LogInformation("Manifest hot reload is disabled.");
             return;
         }
-
-        Directory.CreateDirectory(manifestDirectory);
 
         watcher = new FileSystemWatcher(manifestDirectory)
         {
@@ -64,6 +63,8 @@ public sealed class FileSystemWatcherManifestProvider : IManifestProvider, IHost
         watcher.Deleted += OnManifestDirectoryChanged;
         watcher.Renamed += OnManifestRenamed;
         watcher.EnableRaisingEvents = true;
+
+        await RefreshAsync(cancellationToken);
 
         logger.LogInformation("Manifest hot reload is watching {ManifestDirectory}", manifestDirectory);
     }

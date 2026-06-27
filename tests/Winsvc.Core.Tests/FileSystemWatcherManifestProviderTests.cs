@@ -100,13 +100,19 @@ public sealed class FileSystemWatcherManifestProviderTests
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         while (!timeout.IsCancellationRequested)
         {
-            var manifest = await provider.GetManifestAsync(id, timeout.Token);
+            var manifest = await provider.GetManifestAsync(id);
             if (manifest?.DisplayName == expectedDisplayName)
             {
                 return manifest;
             }
 
-            await Task.Delay(100, timeout.Token);
+            try
+            {
+                await Task.Delay(100, timeout.Token);
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         throw new TimeoutException($"Manifest '{id}' did not reload to '{expectedDisplayName}'.");
