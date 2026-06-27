@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Logging.Abstractions;
+using Winsvc.Contracts.Manifest;
 using Winsvc.Infrastructure;
 
 namespace Winsvc.Core.Tests;
@@ -10,7 +11,7 @@ public sealed class FileSystemWatcherManifestProviderTests
     {
         using var workspace = TemporaryDirectory.Create();
         await WriteManifestAsync(workspace.Path, "alpha", "Alpha");
-        await File.WriteAllTextAsync(Path.Combine(workspace.Path, "service.template.yaml"), "id: template");
+        await WriteManifestAsync(workspace.Path, "template", "Template", fileStem: "service.template");
         using var provider = CreateProvider(workspace.Path, hotReloadEnabled: false);
 
         await provider.StartAsync(CancellationToken.None);
@@ -63,6 +64,54 @@ public sealed class FileSystemWatcherManifestProviderTests
         Assert.Equal("Alpha", manifest?.DisplayName);
     }
 
+    [Fact]
+    public async Task HotReloadEnabled_UpdatesCacheWhenManifestChanges()
+    {
+        using var workspace = TemporaryDirectory.Create();
+        await WriteManifestAsync(workspace.Path, "alpha", "Alpha");
+        using var provider = CreateProvider(workspace.Path, hotReloadEnabled: true);
+        await provider.StartAsync(CancellationToken.None);
+
+        await WriteManifestAsync(workspace.Path, "alpha", "Alpha Reloaded");
+
+        var manifest = await WaitForManifestAsync(provider, "alpha", "Alpha Reloaded");
+        Assert.Equal("Alpha Reloaded", manifest.DisplayName);
+    }
+
+    [Fact]
+    public async Task StartAsync_CreatesMissingManifestDirectorySoFutureFilesAreWatched()
+    {
+        using var workspace = TemporaryDirectory.Create();
+        var manifestDirectory = Path.Combine(workspace.Path, "manifests");
+        using var provider = CreateProvider(manifestDirectory, hotReloadEnabled: true);
+        await provider.StartAsync(CancellationToken.None);
+
+        await WriteManifestAsync(manifestDirectory, "alpha", "Alpha");
+
+        var manifest = await WaitForManifestAsync(provider, "alpha", "Alpha");
+        Assert.Equal("Alpha", manifest.DisplayName);
+    }
+
+    static async Task<ServiceManifest> WaitForManifestAsync(
+        FileSystemWatcherManifestProvider provider,
+        string id,
+        string expectedDisplayName)
+    {
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        while (!timeout.IsCancellationRequested)
+        {
+            var manifest = await provider.GetManifestAsync(id, timeout.Token);
+            if (manifest?.DisplayName == expectedDisplayName)
+            {
+                return manifest;
+            }
+
+            await Task.Delay(100, timeout.Token);
+        }
+
+        throw new TimeoutException($"Manifest '{id}' did not reload to '{expectedDisplayName}'.");
+    }
+
     static FileSystemWatcherManifestProvider CreateProvider(string manifestDirectory, bool hotReloadEnabled)
     {
         return new FileSystemWatcherManifestProvider(
@@ -73,9 +122,14 @@ public sealed class FileSystemWatcherManifestProviderTests
             NullLogger<FileSystemWatcherManifestProvider>.Instance);
     }
 
-    static async Task<string> WriteManifestAsync(string manifestDirectory, string id, string displayName)
+    static async Task<string> WriteManifestAsync(
+        string manifestDirectory,
+        string id,
+        string displayName,
+        string? fileStem = null)
     {
-        var path = Path.Combine(manifestDirectory, $"{id}.yaml");
+        Directory.CreateDirectory(manifestDirectory);
+        var path = Path.Combine(manifestDirectory, $"{fileStem ?? id}.yaml");
         var yaml = $@"
 id: {id}
 displayName: {displayName}

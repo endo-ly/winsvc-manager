@@ -47,11 +47,7 @@ public sealed class FileSystemWatcherManifestProvider : IManifestProvider, IHost
             return;
         }
 
-        if (!Directory.Exists(manifestDirectory))
-        {
-            logger.LogWarning("Manifest directory does not exist: {ManifestDirectory}", manifestDirectory);
-            return;
-        }
+        Directory.CreateDirectory(manifestDirectory);
 
         watcher = new FileSystemWatcher(manifestDirectory)
         {
@@ -154,6 +150,15 @@ public sealed class FileSystemWatcherManifestProvider : IManifestProvider, IHost
                 }
                 finally
                 {
+                    lock (reloadGate)
+                    {
+                        if (ReferenceEquals(pendingReload, tokenSource))
+                        {
+                            pendingReload = null;
+                            pendingReloadTask = null;
+                        }
+                    }
+
                     tokenSource.Dispose();
                 }
             });
