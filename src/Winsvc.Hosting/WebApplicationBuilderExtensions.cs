@@ -13,7 +13,7 @@ public static class WebApplicationBuilderExtensions
             builder.WebHost.UseUrls(apiUrls);
         }
 
-        builder.Services.AddWinsvcServices();
+        builder.Services.AddWinsvcServices(builder.Configuration, builder.Environment.ContentRootPath);
         return builder;
     }
 }
